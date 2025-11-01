@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon-Aware Router</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Simple loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: none; /* Hidden by default */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl bg-gray-800 rounded-lg shadow-xl p-8 space-y-6">
+        
+        <!-- Header -->
+        <h1 class="text-3xl font-bold text-center text-white">"Auto Mode" Model Router</h1>
+        <p class="text-center text-gray-400">
+            Enter a prompt, and the `phi3:mini` classifier (running on Colab) will select the right model.
+        </p>
+        
+        <!-- Prompt Input -->
+        <div class="space-y-2">
+            <label for="prompt-input" class="block text-sm font-medium text-gray-300">Your Prompt:</label>
+            <textarea id="prompt-input" rows="4" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., 'What is 1+1?' or 'Write a poem about a robot...'"></textarea>
+        </div>
+        
+        <!-- Classify Button -->
+        <button id="classify-btn" class="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900">
+            <div id="loader" class="loader"></div>
+            <span id="btn-text">Classify Prompt</span>
+        </button>
+        
+        <!-- Results Section -->
+        <div class="bg-gray-700 rounded-lg p-4 space-y-4">
+            <!-- 1. Complexity Result -->
+            <div class="flex justify-between items-center">
+                <span class="text-gray-400 font-medium">Predicted Complexity:</span>
+                <span id="result-display" class="text-lg font-bold text-white">-</span>
+            </div>
+            
+            <!-- 2. Dropdown -->
+            <div class="flex justify-between items-center">
+                <label for="model-dropdown" class="text-gray-400 font-medium">Selected Model:</label>
+                <select id="model-dropdown" class="w-1/2 p-2 bg-gray-600 border border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value="gemma2:2b">gemma2:2b (Low)</option>
+                    <option value="llama3:8b">llama3:8b (Medium)</option>
+                    <option value="gpt-4o-api">gpt-4o-api (High)</option>
+                </select>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ===============================================================
+        // 🚨 IMPORTANT 🚨
+        // Paste your Colab ngrok URL here (must start with https://)
+        // ===============================================================
+        const API_URL = "https://unmiasmic-ontogenetic-kandis.ngrok-free.dev/"; 
+        // ===============================================================
+
+        const classifyBtn = document.getElementById('classify-btn');
+        const btnText = document.getElementById('btn-text');
+        const loader = document.getElementById('loader');
+        const promptInput = document.getElementById('prompt-input');
+        const resultDisplay = document.getElementById('result-display');
+        const dropdown = document.getElementById('model-dropdown');
+
+        classifyBtn.onclick = async () => {
+            const prompt = promptInput.value;
+            if (!prompt) {
+                resultDisplay.textContent = "Please enter a prompt";
+                return;
+            }
+
+            if (API_URL === "YOUR_NGROK_URL_HERE") {
+                resultDisplay.textContent = "Error: Set API_URL in index.html";
+                return;
+            }
+
+            // --- Show loading state ---
+            btnText.textContent = "Classifying...";
+            loader.style.display = "block";
+            classifyBtn.disabled = true;
+
+            try {
+                // --- 1. Call the Backend API ---
+                const response = await fetch(API_URL + "/classify", {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Backend Error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // --- 2. Update the UI with the results ---
+                resultDisplay.textContent = data.complexity.toUpperCase();
+                dropdown.value = data.selected_model;
+
+            } catch (error) {
+                console.error(error);
+                resultDisplay.textContent = "Error connecting to backend.";
+            } finally {
+                // --- Reset loading state ---
+                btnText.textContent = "Classify Prompt";
+                loader.style.display = "none";
+                classifyBtn.disabled = false;
+            }
+        };
+    </script>
+
+</body>
+</html>
